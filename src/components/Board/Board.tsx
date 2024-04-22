@@ -7,14 +7,15 @@ import { IssueList } from "./IssueList";
 export const Board = () => {
   const { repositoriesData, currentRepositoryUrl } = useIssuesStore();
 
-  if (!repositoriesData[currentRepositoryUrl]) return <></>;
+  const currentRepositoryData = repositoriesData[currentRepositoryUrl];
 
-  const { todoIssues, inProgressIssues, doneIssues } =
-    repositoriesData[currentRepositoryUrl];
+  if (!currentRepositoryData) return null;
+
+  const { todoIssues, inProgressIssues, doneIssues } = currentRepositoryData;
 
   return (
     <Box
-      id="boardContainer"
+      data-cy-id="boardContainer"
       sx={{ display: "flex", gap: "35px", marginTop: "35px" }}
     >
       <IssueList

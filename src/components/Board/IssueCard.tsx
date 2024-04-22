@@ -1,40 +1,29 @@
 import React from "react";
 import { Box, Text } from "@chakra-ui/react";
 
-import { convertDateIntoDaysAgo } from "helpers";
+import { convertDateIntoDaysAgo, figureOutDaysAgoLine } from "helpers";
 
 import type { GithubIssue, IssueCategory } from "types";
 
-export const IssueCard = ({
-  issue,
-  currentIssueCategory,
-}: {
+type IssueCardProps = {
   currentIssueCategory: IssueCategory;
   issue: GithubIssue;
-}) => {
+};
+
+export const IssueCard = ({ issue, currentIssueCategory }: IssueCardProps) => {
   const handleOnDragStart = (e: React.DragEvent) => {
     if (e.dataTransfer) {
-      e.dataTransfer.setData("issueId", issue.id as unknown as string);
+      e.dataTransfer.setData("issueId", String(issue.id));
       e.dataTransfer.setData("issueCategory", currentIssueCategory);
     }
   };
 
   const daysAgo = convertDateIntoDaysAgo(issue.created_at);
 
-  const figureOutDaysAgoLine = () => {
-    switch (daysAgo) {
-      case 0:
-        return "today";
-      case 1:
-        return daysAgo + " day ago";
-      default:
-        return daysAgo + " days ago";
-    }
-  };
-
   return (
     <Box
       draggable
+      data-cy-id="issueCard"
       data-issue-id={issue.id}
       onDragStart={handleOnDragStart}
       sx={{
@@ -54,7 +43,7 @@ export const IssueCard = ({
         {issue.title}
       </Text>
       <Text fontWeight="bold" textColor="gray">
-        #{issue.id} opened {figureOutDaysAgoLine()}
+        #{issue.id} opened {figureOutDaysAgoLine(daysAgo)}
       </Text>
       <Text fontWeight="bold" textColor="gray">
         {issue.user?.login} | {issue.comments} comments

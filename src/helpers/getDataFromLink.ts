@@ -1,11 +1,35 @@
+const buildGithubLinks = ({
+  owner = "",
+  repo = "",
+}: {
+  owner: string;
+  repo: string;
+}) => {
+  const linkBase = "https://github.com";
+  const linkToOwner = owner ? linkBase + `/${owner}` : "";
+  const linkToRepo = linkToOwner ? linkToOwner + `/${repo}` : "";
+
+  return {
+    linkToOwner,
+    linkToRepo,
+  };
+};
 export const getDataFromLink = (link: string) => {
-  const split = link.split("/");
+  const regex = /^(https?:\/\/)?(www\.)?github\.com\/([^/]+)\/([^/]+)\/?.*$/;
+  const match = link.match(regex);
 
-  const owner = split[3];
-  const repo = split[4];
+  if (!match)
+    return {
+      owner: "",
+      repo: "",
+      linkToOwner: "",
+      linkToRepo: "",
+    };
 
-  const linkToOwner = split.slice(0, 4).join("/");
-  const linkToRepo = split.slice(0, 5).join("/");
+  const owner = match[3];
+  const repo = match[4];
+
+  const { linkToOwner, linkToRepo } = buildGithubLinks({ owner, repo });
 
   return { owner, repo, linkToOwner, linkToRepo };
 };

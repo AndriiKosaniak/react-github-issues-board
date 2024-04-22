@@ -10,11 +10,11 @@ export const GithubLinkBreadcrumbs = () => {
   const { owner, repo, linkToOwner, linkToRepo } =
     getDataFromLink(currentRepositoryUrl);
 
-  if (!currentRepositoryUrl) return <></>;
+  if (!currentRepositoryUrl || (!owner && !repo)) return null;
 
   return (
     <Box
-      id="githubLinkBreadcrumbsContainer"
+      data-cy-id="githubLinkBreadcrumbsContainer"
       sx={{
         display: "flex",
         gap: "15px",
@@ -22,11 +22,11 @@ export const GithubLinkBreadcrumbs = () => {
         marginLeft: "5px",
       }}
     >
-      <Link href={linkToOwner} isExternal>
+      <Link data-cy-id='linkToOwner' href={linkToOwner} isExternal>
         {owner}
       </Link>
       <Text>{">"}</Text>
-      <Link href={linkToRepo} isExternal>
+      <Link data-cy-id='linkToRepo' href={linkToRepo} isExternal>
         {repo}
       </Link>
     </Box>

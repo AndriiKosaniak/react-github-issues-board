@@ -26,18 +26,24 @@ export const IssueList = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-      const issueId = parseInt(e.dataTransfer?.getData("issueId"));
-      const issueCategory: IssueCategory = e.dataTransfer?.getData(
-        "issueCategory"
-      ) as IssueCategory;
+    const { dataTransfer } = e;
 
-    if (!issueId || !issueCategory) return;
+    if (!dataTransfer) return;
+
+    const issueId = parseInt(dataTransfer.getData("issueId"));
+    const sourceIssueCategory: IssueCategory = dataTransfer.getData(
+      "issueCategory"
+    ) as IssueCategory;
+
+    const destinationIssueCategory = currentIssueCategory as IssueCategory;
+
+    if (!issueId || !sourceIssueCategory) return;
 
     const insertIndex = findInsertIndex(e, issues);
 
     moveIssueBetweenCategories(
-      issueCategory,
-      currentIssueCategory,
+      sourceIssueCategory,
+      destinationIssueCategory,
       issueId,
       insertIndex
     );
@@ -45,7 +51,7 @@ export const IssueList = ({
 
   return (
     <Box
-      id={currentIssueCategory}
+      data-cy-id={currentIssueCategory}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       sx={{

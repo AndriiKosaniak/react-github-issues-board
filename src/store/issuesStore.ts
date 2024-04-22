@@ -1,23 +1,25 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import { octokit } from "api";
+import { githubApi } from "api";
 import { getDataFromLink } from "helpers";
 
 import type { RequestError } from "@octokit/types";
 import type { GithubIssue, IssueCategory } from "types";
 
+type RepositoriesData = {
+  [repositoryUrl: string]: {
+    todoIssues: GithubIssue[];
+    inProgressIssues: GithubIssue[];
+    doneIssues: GithubIssue[];
+  };
+};
+
 type IssuesStore = {
   isLoading: boolean;
   error: string;
   currentRepositoryUrl: string;
-  repositoriesData: {
-    [repositoryUrl: string]: {
-      todoIssues: GithubIssue[];
-      inProgressIssues: GithubIssue[];
-      doneIssues: GithubIssue[];
-    };
-  };
+  repositoriesData: RepositoriesData;
   fetchIssues: (repositoryUrl: string) => void;
   moveIssueBetweenCategories: (
     sourceCategory: IssueCategory,
@@ -37,36 +39,29 @@ export const useIssuesStore = create<IssuesStore>()(
       currentRepositoryUrl: "",
       fetchIssues: async (repositoryUrl) => {
         try {
-          set({ isLoading: true });
-
           const { owner, repo } = getDataFromLink(repositoryUrl);
 
-          if (repositoryUrl in get().repositoriesData) {
-            set({ currentRepositoryUrl: repositoryUrl });
-            set({ isLoading: false });
-            return;
-          }
+          const { repositoriesData } = get();
 
-          const openIssuesResponse = await octokit.request(
-            "GET /repos/{owner}/{repo}/issues",
-            {
-              owner: owner,
-              repo: repo,
-              state: "open",
-            }
-          );
+          set({ currentRepositoryUrl: repositoryUrl });
 
-          const doneIssuesResponse = await octokit.request(
-            "GET /repos/{owner}/{repo}/issues",
-            {
-              owner: owner,
-              repo: repo,
-              state: "closed",
-            }
-          );
+          if (repositoryUrl in repositoriesData) return;
 
-          const openIssues = openIssuesResponse.data;
-          const doneIssues = doneIssuesResponse.data;
+          set({ isLoading: true });
+
+          const [{ data: openIssues }, { data: doneIssues }] =
+            await Promise.all([
+              githubApi.fetchIssues({
+                owner,
+                repo,
+                state: "open",
+              }),
+              githubApi.fetchIssues({
+                owner,
+                repo,
+                state: "closed",
+              }),
+            ]);
 
           const todoIssues = openIssues.filter((issue) => !issue.assignee);
           const inProgressIssues = openIssues.filter((issue) => issue.assignee);
@@ -74,7 +69,7 @@ export const useIssuesStore = create<IssuesStore>()(
           set({
             currentRepositoryUrl: repositoryUrl,
             repositoriesData: {
-              ...get().repositoriesData,
+              ...repositoriesData,
               [repositoryUrl]: {
                 todoIssues,
                 inProgressIssues,
@@ -82,11 +77,10 @@ export const useIssuesStore = create<IssuesStore>()(
               },
             },
           });
-
-          set({ isLoading: false });
         } catch (err) {
-          const error = err as RequestError;
-          set({ error: error.name });
+          const { name } = err as RequestError;
+          set({ error: name });
+        } finally {
           set({ isLoading: false });
         }
       },
@@ -96,8 +90,9 @@ export const useIssuesStore = create<IssuesStore>()(
         issueId,
         index
       ) => {
-        const repositoryData =
-          get().repositoriesData[get().currentRepositoryUrl];
+        const { repositoriesData, currentRepositoryUrl } = get();
+        const repositoryData = repositoriesData[currentRepositoryUrl];
+
         if (!repositoryData) return get();
 
         const sourceIssues = repositoryData[sourceCategory];
@@ -113,8 +108,8 @@ export const useIssuesStore = create<IssuesStore>()(
         destinationIssues.splice(index, 0, movedIssue);
 
         const updatedRepositoriesData = {
-          ...get().repositoriesData,
-          [get().currentRepositoryUrl]: {
+          ...repositoriesData,
+          [currentRepositoryUrl]: {
             ...repositoryData,
             [sourceCategory]: sourceIssues,
             [destinationCategory]: destinationIssues,
@@ -122,7 +117,6 @@ export const useIssuesStore = create<IssuesStore>()(
         };
 
         set({
-          ...get(),
           repositoriesData: updatedRepositoriesData,
         });
       },
